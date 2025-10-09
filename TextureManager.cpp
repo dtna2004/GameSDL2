@@ -8,6 +8,11 @@ SDL_Texture* TextureManager::LoadTexture(const std::string& fileName, SDL_Render
         return nullptr;
     }
 
+    // === THÊM MỚI: XÓA NỀN TRẮNG ===
+    // Thiết lập màu trắng (R=255, G=255, B=255) làm màu trong suốt
+    SDL_SetColorKey(tempSurface, SDL_TRUE, SDL_MapRGB(tempSurface->format, 255, 255, 255));
+    // ===================================
+
     SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, tempSurface);
     SDL_FreeSurface(tempSurface);
 
