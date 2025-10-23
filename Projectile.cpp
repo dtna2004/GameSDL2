@@ -6,7 +6,7 @@
 #define PI 3.14159265
 
 Projectile::Projectile(SDL_Renderer* renderer, float x, float y, float angle, float power) {
-    texture = TextureManager::LoadTexture("image/projectile.png", renderer);
+    texture = TextureManager::LoadTexture("image/projectile1.png", renderer);
     x_pos = x;
     y_pos = y;
 

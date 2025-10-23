@@ -4,7 +4,7 @@
 
 // Định nghĩa các hằng số cho dễ quản lý
 const float PLAYER_GRAVITY = 0.5f;
-const int GROUND_LEVEL = 480; // MẶT ĐẤT ẢO SẼ Ở TỌA ĐỘ Y = 480
+const int GROUND_LEVEL = 460; // MẶT ĐẤT ẢO SẼ Ở TỌA ĐỘ Y = 480
 
 Player::Player(const std::string& texturePath, int x, int y, SDL_Renderer* renderer) {
     texture = TextureManager::LoadTexture(texturePath, renderer);
@@ -19,7 +19,6 @@ Player::~Player() {
 }
 
 void Player::handleEvent(SDL_Event& e, std::vector<Projectile*>& projectiles, SDL_Renderer* renderer) {
-    // ... (Toàn bộ nội dung hàm này giữ nguyên không đổi) ...
     if (!projectiles.empty()) return;
     const Uint8* currentKeyStates = SDL_GetKeyboardState(NULL);
     if (currentKeyStates[SDL_SCANCODE_A] || currentKeyStates[SDL_SCANCODE_LEFT]) {
@@ -55,7 +54,7 @@ void Player::handleEvent(SDL_Event& e, std::vector<Projectile*>& projectiles, SD
     }
 }
 
-// HÀM UPDATE ĐƯỢC ĐƠN GIẢN HÓA
+
 void Player::update() {
     // 1. Cập nhật trạng thái tăng lực
     if (isCharging) {
@@ -82,12 +81,10 @@ void Player::update() {
 }
 
 void Player::render(SDL_Renderer* renderer) {
-    // ... (Hàm này giữ nguyên không đổi) ...
     SDL_RendererFlip flip = facingRight ? SDL_FLIP_NONE : SDL_FLIP_HORIZONTAL;
     SDL_RenderCopyEx(renderer, texture, NULL, &rect, 0.0, NULL, flip);
 }
 
 SDL_Rect Player::getRect() {
-    // ... (Hàm này giữ nguyên không đổi) ...
     return rect;
 }

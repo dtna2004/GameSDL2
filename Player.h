@@ -3,7 +3,7 @@
 #include <string>
 #include <vector>
 #include "Projectile.h"
-// #include "Map.h" // <-- BỎ DÒNG NÀY, không cần nữa
+
 
 class Player {
 public:
@@ -11,9 +11,13 @@ public:
     ~Player();
 
     void handleEvent(SDL_Event& e, std::vector<Projectile*>& projectiles, SDL_Renderer* renderer);
-    void update(); // <-- BỎ Map* ra khỏi hàm này
+    void update();
     void render(SDL_Renderer* renderer);
     SDL_Rect getRect();
+
+    float getPower() const { return power; }
+    float getAngle() const { return angle; }
+    bool isFacingRight() const { return facingRight; }
 
     int health = 3;
 

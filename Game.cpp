@@ -1,8 +1,14 @@
 #include "Game.h"
 #include "TextureManager.h"
 #include <iostream>
+#include <cmath>
+
+#ifndef PI
+#define PI 3.14159265
+#endif
 
 const int GROUND_LEVEL_FOR_PROJECTILE = 480;
+const float MAX_POWER = 500.0f;
 
 Game::Game() {}
 Game::~Game() {}
@@ -39,6 +45,11 @@ void Game::init(const char* title, int width, int height) {
     turn1Texture = TextureManager::LoadTexture("image/turn_player1.png", renderer);
     turn2Texture = TextureManager::LoadTexture("image/turn_player2.png", renderer);
 
+    // <<-- TẢI TEXTURE MÀN HÌNH WIN VÀ NÚT CHƠI LẠI
+    win1Texture = TextureManager::LoadTexture("image/win1.png", renderer);
+    win2Texture = TextureManager::LoadTexture("image/win2.png", renderer);
+    playAgainButton = new Button("image/playagain.png", (800 - 250) / 2, 400, 250, 80, renderer);
+
     player1Button = new Button("image/1_player_button.png", 100, 350, 250, 80, renderer);
     player2Button = new Button("image/2_player_button.png", 450, 350, 250, 80, renderer);
     settingsButton = new Button("image/settings_button.png", 100, 450, 250, 80, renderer);
@@ -47,6 +58,27 @@ void Game::init(const char* title, int width, int height) {
     musicToggleButton = new Button("image/volumn_button.png", 275, 200, 250, 80, renderer);
     backButton = new Button("image/exit_button.png", 275, 300, 250, 80, renderer);
 
+    gameState = GameState::MAIN_MENU;
+}
+
+// <<-- HÀM MỚI ĐỂ RESET GAME
+void Game::resetGame() {
+    // Dọn dẹp các đối tượng của ván chơi cũ
+    delete player1;
+    player1 = nullptr;
+    delete player2;
+    player2 = nullptr;
+
+    for (auto p : projectiles) delete p;
+    projectiles.clear();
+    for (auto e : explosions) delete e;
+    explosions.clear();
+
+    // Reset các biến
+    winner = 0;
+    currentPlayerTurn = 1;
+
+    // Quay về menu chính
     gameState = GameState::MAIN_MENU;
 }
 
@@ -73,14 +105,14 @@ void Game::handleEvents() {
         case GameState::MAIN_MENU:
             if (player1Button->isClicked(&event)) {
                 gameState = GameState::PLAYING_1P;
-                player1 = new Player("image/male.png", 100, GROUND_LEVEL_FOR_PROJECTILE - 64, renderer);
-                player2 = new Player("image/female.png", 600, GROUND_LEVEL_FOR_PROJECTILE - 64, renderer);
+                player1 = new Player("image/nam.png", 100, GROUND_LEVEL_FOR_PROJECTILE - 64, renderer);
+                player2 = new Player("image/nu.png", 600, GROUND_LEVEL_FOR_PROJECTILE - 64, renderer);
                 switchTurn(); // Bắt đầu lượt đầu tiên
             }
             if (player2Button->isClicked(&event)) {
                 gameState = GameState::PLAYING_2P;
-                player1 = new Player("image/male.png", 100, GROUND_LEVEL_FOR_PROJECTILE - 64, renderer);
-                player2 = new Player("image/female.png", 600, GROUND_LEVEL_FOR_PROJECTILE - 64, renderer);
+                player1 = new Player("image/nam.png", 100, GROUND_LEVEL_FOR_PROJECTILE - 64, renderer);
+                player2 = new Player("image/nu.png", 600, GROUND_LEVEL_FOR_PROJECTILE - 64, renderer);
                 switchTurn(); // Bắt đầu lượt đầu tiên
             }
             if (settingsButton->isClicked(&event)) {
@@ -98,6 +130,12 @@ void Game::handleEvents() {
             }
             if (backButton->isClicked(&event)) {
                 gameState = GameState::MAIN_MENU;
+            }
+            break;
+
+        case GameState::GAME_OVER:
+            if (playAgainButton->isClicked(&event)) {
+                resetGame();
             }
             break;
 
@@ -132,7 +170,7 @@ void Game::update() {
     if (remainingTime < 0) remainingTime = 0;
     createTextTexture(std::to_string(remainingTime)); // Tạo texture chữ mới
 
-    // ... (Phần logic update đạn, va chạm, hiệu ứng nổ giữ nguyên không đổi) ...
+    //  update đạn, va chạm, hiệu ứng nổ giữ nguyên) ...
     for (int i = 0; i < projectiles.size(); ++i) {
         projectiles[i]->update();
         SDL_Rect projRect = projectiles[i]->getRect();
@@ -145,15 +183,30 @@ void Game::update() {
             continue;
         }
         Player* targetPlayer = (currentPlayerTurn == 1) ? player2 : player1;
-        SDL_Rect targetRect = targetPlayer->getRect();
-        if (SDL_HasIntersection(&projRect, &targetRect)) {
+        SDL_Rect originalRect = targetPlayer->getRect(); // Lấy hình chữ nhật 64x64 gốc
+
+        // Tạo một hitbox nhỏ hơn, nằm bên trong hình chữ nhật gốc
+        SDL_Rect targetHitbox = {
+            originalRect.x + 15, // Lùi vào 15 pixel từ bên trái
+            originalRect.y + 10, // Lùi vào 10 pixel từ phía trên
+            34,                  // Chiều rộng mới = 64 - 15 (trái) - 15 (phải)
+            54                   // Chiều cao mới = 64 - 10 (trên)
+        };
+
+        if (SDL_HasIntersection(&projRect, &targetHitbox)) {
             targetPlayer->health--;
             explosions.push_back(new Explosion(renderer, projRect.x, projRect.y));
             delete projectiles[i];
             projectiles.erase(projectiles.begin() + i);
             i--;
-            if (targetPlayer->health <= 0) gameState = GameState::GAME_OVER;
-            else switchTurn();
+            // <<-- CẬP NHẬT LOGIC CHIẾN THẮNG
+            if (targetPlayer->health <= 0) {
+                gameState = GameState::GAME_OVER;
+                winner = currentPlayerTurn; // Lưu lại người chiến thắng
+                std::cout << "GAME OVER! Player " << winner << " wins!" << std::endl;
+            } else {
+                switchTurn();
+            }
         }
     }
     for (int i = 0; i < explosions.size(); ++i) {
@@ -198,7 +251,27 @@ void Game::render() {
             musicToggleButton->render(renderer);
             backButton->render(renderer);
         }
-    } else {
+    }
+    else if (gameState == GameState::GAME_OVER) {
+        // Vẽ lại màn chơi cuối cùng
+        if (map) map->render(renderer);
+        if (player1) player1->render(renderer);
+        if (player2) player2->render(renderer);
+
+        // Vẽ ảnh người chiến thắng tương ứng
+        SDL_Texture* winTexture = nullptr;
+        if (winner == 1) winTexture = win1Texture;
+        else if (winner == 2) winTexture = win2Texture;
+
+        if (winTexture) {
+            SDL_Rect winRect = {(800 - 400) / 2, (600 - 200) / 2, 400, 200}; // Căn giữa
+            SDL_RenderCopy(renderer, winTexture, NULL, &winRect);
+        }
+
+        // Vẽ nút chơi lại
+        playAgainButton->render(renderer);
+    }
+    else {
         if (map) map->render(renderer);
         if (player1) player1->render(renderer);
         if (player2) player2->render(renderer);
@@ -233,6 +306,37 @@ void Game::render() {
         if (gameState == GameState::PAUSED && pauseOverlay) {
              SDL_RenderCopy(renderer, pauseOverlay, NULL, NULL);
         }
+        // <<-- VẼ GIAO DIỆN HỖ TRỢ BẮN
+        Player* currentPlayer = (currentPlayerTurn == 1) ? player1 : player2;
+        if (currentPlayer) {
+            // 1. Vẽ thanh lực (Power Bar)
+            SDL_Rect powerBarBg = { currentPlayer->getRect().x, currentPlayer->getRect().y - 20, 100, 10 };
+            SDL_SetRenderDrawColor(renderer, 50, 50, 50, 255); // Màu nền xám
+            SDL_RenderFillRect(renderer, &powerBarBg);
+
+            float powerPercent = currentPlayer->getPower() / MAX_POWER;
+            SDL_Rect powerBarFg = { powerBarBg.x, powerBarBg.y, (int)(100 * powerPercent), 10 };
+            SDL_SetRenderDrawColor(renderer, 255, 200, 0, 255); // Màu lực vàng
+            SDL_RenderFillRect(renderer, &powerBarFg);
+
+            // 2. Vẽ đường ngắm (Aiming Line)
+            float angle = currentPlayer->getAngle();
+            bool facingRight = currentPlayer->isFacingRight();
+            float shootingAngle = facingRight ? angle : 180.0f - angle;
+            float angleRad = shootingAngle * PI / 180.0f;
+
+            int startX = currentPlayer->getRect().x + currentPlayer->getRect().w / 2;
+            int startY = currentPlayer->getRect().y + currentPlayer->getRect().h / 2;
+            int endX = startX + (int)(cos(angleRad) * 40); // Độ dài 40 pixel
+            int endY = startY - (int)(sin(angleRad) * 40); // Dấu trừ vì trục Y ngược
+
+            SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255); // Màu trắng
+            SDL_RenderDrawLine(renderer, startX, startY, endX, endY);
+        }
+
+        if (gameState == GameState::PAUSED && pauseOverlay) {
+            SDL_RenderCopy(renderer, pauseOverlay, NULL, NULL);
+        }
     }
 
     SDL_RenderPresent(renderer);
@@ -257,6 +361,9 @@ void Game::clean() {
     SDL_DestroyTexture(turn1Texture);
     SDL_DestroyTexture(turn2Texture);
     SDL_DestroyTexture(timerTexture);
+    SDL_DestroyTexture(win1Texture);
+    SDL_DestroyTexture(win2Texture);
+    delete playAgainButton;
     TTF_CloseFont(gameFont);
 
     for (auto p : projectiles) delete p;

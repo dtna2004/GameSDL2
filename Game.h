@@ -35,6 +35,7 @@ public:
 private:
     void switchTurn();
     void createTextTexture(const std::string& text); // <<-- HÀM MỚI để tạo texture chữ
+    void resetGame();
 
     bool isRunning = false;
     SDL_Window* window = nullptr;
@@ -58,6 +59,12 @@ private:
     SDL_Texture* turn1Texture = nullptr; // <<-- TEXTURE THÔNG BÁO LƯỢT 1
     SDL_Texture* turn2Texture = nullptr; // <<-- TEXTURE THÔNG BÁO LƯỢT 2
     Map* map = nullptr;
+
+    int winner = 0; // 1 = Player 1 wins, 2 = Player 2 wins
+    SDL_Texture* win1Texture = nullptr;
+    SDL_Texture* win2Texture = nullptr;
+    // SDL_Texture* machineWinTexture = nullptr; // thêm ai chs thì dùng
+    Button* playAgainButton = nullptr;
 
     // Menu Objects
     Button* player1Button = nullptr;
