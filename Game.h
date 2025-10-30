@@ -1,9 +1,9 @@
 #pragma once
 #include <SDL.h>
 #include <SDL_mixer.h>
-#include <SDL_ttf.h> // <<-- THÊM THƯ VIỆN FONT
+#include <SDL_ttf.h>
 #include <vector>
-#include <string> // <<-- THÊM
+#include <string>
 #include "Player.h"
 #include "Button.h"
 #include "Projectile.h"
@@ -33,8 +33,9 @@ public:
     bool running() { return isRunning; }
 
 private:
+    void startGame(GameState mode); // <<-- KHAI BÁO CÒN THIẾU NẰM Ở ĐÂY
     void switchTurn();
-    void createTextTexture(const std::string& text); // <<-- HÀM MỚI để tạo texture chữ
+    void createTextTexture(const std::string& text);
     void resetGame();
 
     bool isRunning = false;
@@ -43,30 +44,23 @@ private:
     GameState gameState = GameState::MAIN_MENU;
     GameState stateBeforePause;
 
-    // Audio
     Mix_Music* backgroundMusic = nullptr;
     bool isMusicOn = true;
 
-    // Font và Text
-    TTF_Font* gameFont = nullptr; // <<-- FONT
-    SDL_Texture* timerTexture = nullptr; // <<-- TEXTURE CHO ĐỒNG HỒ
+    TTF_Font* gameFont = nullptr;
+    SDL_Texture* timerTexture = nullptr;
     SDL_Rect timerRect;
 
-    // Textures
     SDL_Texture* backgroundTexture = nullptr;
     SDL_Texture* pauseOverlay = nullptr;
-    SDL_Texture* heartTexture = nullptr; // <<-- TEXTURE TRÁI TIM
-    SDL_Texture* turn1Texture = nullptr; // <<-- TEXTURE THÔNG BÁO LƯỢT 1
-    SDL_Texture* turn2Texture = nullptr; // <<-- TEXTURE THÔNG BÁO LƯỢT 2
-    Map* map = nullptr;
-
-    int winner = 0; // 1 = Player 1 wins, 2 = Player 2 wins
+    SDL_Texture* heartTexture = nullptr;
+    SDL_Texture* turn1Texture = nullptr;
+    SDL_Texture* turn2Texture = nullptr;
     SDL_Texture* win1Texture = nullptr;
     SDL_Texture* win2Texture = nullptr;
-    // SDL_Texture* machineWinTexture = nullptr; // thêm ai chs thì dùng
-    Button* playAgainButton = nullptr;
+    Map* map = nullptr;
 
-    // Menu Objects
+    Button* playAgainButton = nullptr;
     Button* player1Button = nullptr;
     Button* player2Button = nullptr;
     Button* settingsButton = nullptr;
@@ -74,7 +68,7 @@ private:
     Button* musicToggleButton = nullptr;
     Button* backButton = nullptr;
 
-    // Game Objects
+    bool turnShouldEnd = false;
     Player* player1 = nullptr;
     Player* player2 = nullptr;
     std::vector<Projectile*> projectiles;
@@ -82,7 +76,6 @@ private:
     int currentPlayerTurn = 1;
     Uint32 turnStartTime = 0;
     const int TURN_DURATION = 20000;
-
-    // Logic cho thông báo lượt chơi
-    Uint32 turnNotificationEndTime = 0; // <<-- BIẾN HẸN GIỜ
+    Uint32 turnNotificationEndTime = 0;
+    int winner = 0;
 };

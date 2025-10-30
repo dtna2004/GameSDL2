@@ -3,7 +3,7 @@
 #include <string>
 #include <vector>
 #include "Projectile.h"
-
+#include "Map.h" // <<-- THÊM LẠI MAP.H
 
 class Player {
 public:
@@ -11,17 +11,20 @@ public:
     ~Player();
 
     void handleEvent(SDL_Event& e, std::vector<Projectile*>& projectiles, SDL_Renderer* renderer);
-    void update();
+    void update(Map* map); // <<-- THÊM LẠI MAP VÀO HÀM UPDATE
     void render(SDL_Renderer* renderer);
     SDL_Rect getRect();
+
+    // <<-- HÀM MỚI ĐỂ KIỂM TRA RƠI RA NGOÀI
+    bool isOutOfBound(int screenHeight) const;
 
     float getPower() const { return power; }
     float getAngle() const { return angle; }
     bool isFacingRight() const { return facingRight; }
 
     int health = 3;
-
 private:
+
     SDL_Texture* texture;
     SDL_Rect rect;
     float angle = 45.0f;
