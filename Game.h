@@ -19,6 +19,13 @@ enum class GameState {
     GAME_OVER
 };
 
+// <<-- CẤU TRÚC LƯU THÔNG TIN MAP
+struct MapData {
+    std::string mapFilePath;
+    SDL_Point player1StartPos; // SDL_Point là một struct có sẵn {int x, int y}
+    SDL_Point player2StartPos;
+};
+
 class Game {
 public:
     Game();
@@ -37,6 +44,9 @@ private:
     void switchTurn();
     void createTextTexture(const std::string& text);
     void resetGame();
+
+    // <<-- DANH SÁCH CÁC MAP CÓ SẴN
+    std::vector<MapData> availableMaps;
 
     bool isRunning = false;
     SDL_Window* window = nullptr;

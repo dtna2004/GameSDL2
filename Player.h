@@ -32,5 +32,6 @@ private:
     bool isCharging = false;
     bool facingRight = true;
     float y_vel = 0.0f;
+    float x_vel = 0.0f;
     bool onGround = false;
 };

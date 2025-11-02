@@ -2,6 +2,7 @@
 #include "TextureManager.h"
 #include <iostream>
 #include <cmath>
+#include <random> // Thư viện cần thiết cho việc tạo số ngẫu nhiên
 
 #ifndef PI
 #define PI 3.14159265
@@ -23,14 +24,32 @@ void Game::init(const char* title, int width, int height) {
     isRunning = true;
     gameFont = TTF_OpenFont("font/arial.ttf", 32);
 
+    // Tạo đối tượng Map, nhưng chưa load một map cụ thể nào
+    map = new Map(renderer, "image/tile.png");
+
+    // ĐIỀN DỮ LIỆU VÀO DANH SÁCH CÁC MAP CÓ SẴN
+    availableMaps.push_back({
+        "level1.map",           // Đường dẫn file map
+        {2, 9},                // Vị trí xuất phát của P1 (cột 2, hàng 11)
+        {21, 9}                // Vị trí xuất phát của P2 (cột 21, hàng 11)
+    });
+    availableMaps.push_back({
+        "level2.map",
+        {2, 8},
+        {21, 8}
+    });
+    availableMaps.push_back({
+        "level3.map",
+        {1, 4},
+        {22, 4}
+    });
+
+    // Tải các tài nguyên khác
     backgroundMusic = Mix_LoadMUS("sound/music.mp3");
     if (backgroundMusic) {
         Mix_PlayMusic(backgroundMusic, -1);
         isMusicOn = true;
     }
-
-    map = new Map(renderer, "image/tile.png");
-    map->loadMap("level1.map");
 
     backgroundTexture = TextureManager::LoadTexture("image/background.png", renderer);
     pauseOverlay = TextureManager::LoadTexture("image/pause.png", renderer);
@@ -53,8 +72,23 @@ void Game::init(const char* title, int width, int height) {
 
 void Game::startGame(GameState mode) {
     gameState = mode;
-    player1 = new Player("image/male.png", 2 * TILE_SIZE, 10 * TILE_SIZE, renderer);
-    player2 = new Player("image/female.png", 21 * TILE_SIZE, 10 * TILE_SIZE, renderer);
+
+    // 1. CHỌN MAP NGẪU NHIÊN
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<> distrib(0, availableMaps.size() - 1);
+
+    int randomMapIndex = distrib(gen);
+    MapData selectedMap = availableMaps[randomMapIndex];
+
+    // 2. TẢI MAP ĐÃ CHỌN
+    map->loadMap(selectedMap.mapFilePath);
+    std::cout << "Loading map: " << selectedMap.mapFilePath << std::endl;
+
+    // 3. TẠO NGƯỜI CHƠI TẠI VỊ TRÍ TƯƠNG ỨNG
+    player1 = new Player("image/male.png", selectedMap.player1StartPos.x * TILE_SIZE, selectedMap.player1StartPos.y * TILE_SIZE, renderer);
+    player2 = new Player("image/female.png", selectedMap.player2StartPos.x * TILE_SIZE, selectedMap.player2StartPos.y * TILE_SIZE, renderer);
+
     switchTurn();
 }
 
@@ -72,19 +106,12 @@ void Game::resetGame() {
     gameState = GameState::MAIN_MENU;
 }
 
-// ==========================================================
-// === SỬA LỖI: KHÔI PHỤC NỘI DUNG HÀM NÀY ===================
-// ==========================================================
 void Game::handleEvents() {
     SDL_Event event;
     SDL_PollEvent(&event);
 
-    // Xử lý sự kiện đóng cửa sổ
-    if (event.type == SDL_QUIT) {
-        isRunning = false;
-    }
+    if (event.type == SDL_QUIT) isRunning = false;
 
-    // Xử lý sự kiện tạm dừng
     if (event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_p && !event.key.repeat) {
         if (gameState == GameState::PLAYING_1P || gameState == GameState::PLAYING_2P) {
             stateBeforePause = gameState;
@@ -96,7 +123,6 @@ void Game::handleEvents() {
         }
     }
 
-    // Xử lý sự kiện theo trạng thái game
     switch (gameState) {
         case GameState::MAIN_MENU:
             if (player1Button->isClicked(&event)) startGame(GameState::PLAYING_1P);
@@ -122,14 +148,13 @@ void Game::handleEvents() {
         default: break;
     }
 }
-// ==========================================================
-
 
 void Game::switchTurn() {
     currentPlayerTurn = (currentPlayerTurn == 1) ? 2 : 1;
     turnStartTime = SDL_GetTicks();
     turnNotificationEndTime = SDL_GetTicks() + 2000;
 }
+
 
 void Game::update() {
     if (gameState != GameState::PLAYING_1P && gameState != GameState::PLAYING_2P) return;
@@ -240,30 +265,10 @@ void Game::render() {
         for (auto& p : projectiles) p->render(renderer);
         for (auto& e : explosions) e->render(renderer);
 
-        // ==========================================================
-        // === SỬA LỖI RÒ RỈ BỘ NHỚ TẠI ĐÂY ===========================
-        // ==========================================================
-        if (player1 && heartTexture) {
-            for (int i = 0; i < player1->health; ++i) {
-                SDL_Rect heartRect = {10 + (i * 35), 10, 32, 32};
-                SDL_RenderCopy(renderer, heartTexture, NULL, &heartRect);
-            }
-        }
-        if (player2 && heartTexture) {
-            for (int i = 0; i < player2->health; ++i) {
-                SDL_Rect heartRect = {790 - 32 - (i * 35), 10, 32, 32};
-                SDL_RenderCopy(renderer, heartTexture, NULL, &heartRect);
-            }
-        }
-        if (timerTexture) {
-            SDL_RenderCopy(renderer, timerTexture, NULL, &timerRect);
-        }
-        if (SDL_GetTicks() < turnNotificationEndTime) {
-            SDL_Texture* turnTexture = (currentPlayerTurn == 1) ? turn1Texture : turn2Texture;
-            SDL_Rect turnRect = {(800 - 300) / 2, (600 - 100) / 2, 300, 100};
-            SDL_RenderCopy(renderer, turnTexture, NULL, &turnRect);
-        }
-        // ==========================================================
+        if (player1 && heartTexture) { for (int i = 0; i < player1->health; ++i) { SDL_Rect r = {10 + (i * 35), 10, 32, 32}; SDL_RenderCopy(renderer, heartTexture, NULL, &r); } }
+        if (player2 && heartTexture) { for (int i = 0; i < player2->health; ++i) { SDL_Rect r = {790 - 32 - (i * 35), 10, 32, 32}; SDL_RenderCopy(renderer, heartTexture, NULL, &r); } }
+        if (timerTexture) { SDL_RenderCopy(renderer, timerTexture, NULL, &timerRect); }
+        if (SDL_GetTicks() < turnNotificationEndTime) { SDL_Rect r = {(800 - 300) / 2, (600 - 100) / 2, 300, 100}; SDL_RenderCopy(renderer, (currentPlayerTurn == 1) ? turn1Texture : turn2Texture, NULL, &r); }
 
         Player* currentPlayer = (currentPlayerTurn == 1) ? player1 : player2;
         if (currentPlayer) {

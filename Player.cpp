@@ -2,9 +2,8 @@
 #include "TextureManager.h"
 #include <iostream>
 
-// Định nghĩa các hằng số cho vật lý của người chơi
 const float PLAYER_GRAVITY = 0.5f;
-const float PLAYER_MOVE_SPEED = 2.0f;
+const float PLAYER_MOVE_SPEED = 3.0f; // Tăng tốc độ một chút cho cảm giác tốt hơn
 
 Player::Player(const std::string& texturePath, int x, int y, SDL_Renderer* renderer) {
     texture = TextureManager::LoadTexture(texturePath, renderer);
@@ -19,23 +18,25 @@ Player::~Player() {
 }
 
 void Player::handleEvent(SDL_Event& e, std::vector<Projectile*>& projectiles, SDL_Renderer* renderer) {
-    if (!projectiles.empty()) return;
+    if (!projectiles.empty()) {
+        x_vel = 0; // Nếu đang bắn thì không cho di chuyển
+        return;
+    }
 
     const Uint8* currentKeyStates = SDL_GetKeyboardState(NULL);
 
-    // Di chuyển ngang (Logic va chạm ngang được tích hợp ở đây)
-    // Phần này được chuyển từ update() sang đây để chỉ di chuyển khi có input
+    // THAY ĐỔI LOGIC: Thay vì trực tiếp thay đổi rect.x, chúng ta sẽ đặt vận tốc
+    x_vel = 0; // Reset vận tốc ở đầu mỗi frame
     if (currentKeyStates[SDL_SCANCODE_A] || currentKeyStates[SDL_SCANCODE_LEFT]) {
-        rect.x -= PLAYER_MOVE_SPEED;
+        x_vel = -PLAYER_MOVE_SPEED;
         facingRight = false;
     }
     if (currentKeyStates[SDL_SCANCODE_D] || currentKeyStates[SDL_SCANCODE_RIGHT]) {
-        rect.x += PLAYER_MOVE_SPEED;
+        x_vel = PLAYER_MOVE_SPEED;
         facingRight = true;
     }
 
-
-    // Logic ngắm bắn và khai hỏa (giữ nguyên không đổi)
+    // Logic ngắm bắn và khai hỏa (giữ nguyên)
     if (currentKeyStates[SDL_SCANCODE_W] || currentKeyStates[SDL_SCANCODE_UP] || currentKeyStates[SDL_SCANCODE_PAGEUP]) {
         angle += 1.0f;
         if (angle > 90) angle = 90;
@@ -59,40 +60,66 @@ void Player::handleEvent(SDL_Event& e, std::vector<Projectile*>& projectiles, SD
     }
 }
 
+// HÀM UPDATE ĐƯỢC LÀM LẠI HOÀN TOÀN ĐỂ XỬ LÝ VA CHẠM
 void Player::update(Map* map) {
     if (isCharging) {
         power += 5.0f;
         if (power > 500.0f) power = 500.0f;
     }
 
-    // === XỬ LÝ VẬT LÝ VÀ VA CHẠM DỌC (TRỌNG LỰC) ===
+    // === 1. XỬ LÝ VA CHẠM NGANG ===
+    rect.x += (int)x_vel;
+    SDL_Rect playerHitbox = { rect.x + 16, rect.y, 32, rect.h - 4 }; // Hitbox hẹp và thấp hơn một chút
+
+    // Nếu đang đi sang phải
+    if (x_vel > 0) {
+        int rightSide = playerHitbox.x + playerHitbox.w;
+        int tileCol = rightSide / TILE_SIZE;
+        if (map->getTileTypeFromPixelCoords(rightSide, playerHitbox.y) != 0 ||
+            map->getTileTypeFromPixelCoords(rightSide, playerHitbox.y + playerHitbox.h) != 0)
+        {
+            // Nếu va chạm, "đẩy" người chơi lùi lại để mép phải của họ chạm vào mép trái của ô gạch
+            rect.x = tileCol * TILE_SIZE - (16 + 32); // 16 là offset, 32 là width của hitbox
+        }
+    }
+    // Nếu đang đi sang trái
+    else if (x_vel < 0) {
+        int leftSide = playerHitbox.x;
+        int tileCol = leftSide / TILE_SIZE;
+         if (map->getTileTypeFromPixelCoords(leftSide, playerHitbox.y) != 0 ||
+            map->getTileTypeFromPixelCoords(leftSide, playerHitbox.y + playerHitbox.h) != 0)
+        {
+            // Nếu va chạm, đẩy người chơi sang phải để mép trái của họ chạm vào mép phải của ô gạch
+            rect.x = (tileCol + 1) * TILE_SIZE - 16; // 16 là offset
+        }
+    }
+
+
+    // === 2. XỬ LÝ VA CHẠM DỌC (TRỌNG LỰC) ===
     y_vel += PLAYER_GRAVITY;
     rect.y += (int)y_vel;
+    playerHitbox = { rect.x + 16, rect.y, 32, rect.h }; // Cập nhật lại hitbox với vị trí Y mới
 
-    // Tạo một hitbox hẹp hơn để nhân vật có thể đi qua các khe hở hẹp
-    SDL_Rect playerHitbox = { rect.x + 16, rect.y, 32, rect.h };
-
-    // Kiểm tra va chạm với đất (khi đang rơi xuống)
+    // Nếu đang rơi xuống
     if (y_vel > 0) {
-        int footLeftTile = map->getTileTypeFromPixelCoords(playerHitbox.x, playerHitbox.y + playerHitbox.h);
-        int footRightTile = map->getTileTypeFromPixelCoords(playerHitbox.x + playerHitbox.w, playerHitbox.y + playerHitbox.h);
-        if (footLeftTile != 0 || footRightTile != 0) {
-            // Nếu va chạm, "đặt" người chơi ngay trên mép trên của ô gạch
-            rect.y = ( (playerHitbox.y + playerHitbox.h) / TILE_SIZE ) * TILE_SIZE - rect.h;
+        int footY = playerHitbox.y + playerHitbox.h;
+        if (map->getTileTypeFromPixelCoords(playerHitbox.x, footY) != 0 ||
+            map->getTileTypeFromPixelCoords(playerHitbox.x + playerHitbox.w, footY) != 0)
+        {
+            rect.y = ( footY / TILE_SIZE ) * TILE_SIZE - rect.h;
             onGround = true;
             y_vel = 0;
         } else {
             onGround = false;
         }
     }
-    // Kiểm tra va chạm với trần (khi đang nhảy lên)
+    // Nếu đang bay lên
     else if (y_vel < 0) {
-        int headLeftTile = map->getTileTypeFromPixelCoords(playerHitbox.x, playerHitbox.y);
-        int headRightTile = map->getTileTypeFromPixelCoords(playerHitbox.x + playerHitbox.w, playerHitbox.y);
-        if (headLeftTile != 0 || headRightTile != 0) {
-            // Nếu va chạm, "đặt" người chơi ngay dưới mép dưới của ô gạch
+        if (map->getTileTypeFromPixelCoords(playerHitbox.x, playerHitbox.y) != 0 ||
+            map->getTileTypeFromPixelCoords(playerHitbox.x + playerHitbox.w, playerHitbox.y) != 0)
+        {
             rect.y = ( (playerHitbox.y / TILE_SIZE) + 1 ) * TILE_SIZE;
-            y_vel = 0; // Dừng việc bay lên
+            y_vel = 0;
         }
     }
 }
