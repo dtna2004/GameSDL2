@@ -3,7 +3,7 @@
 #include <iostream>
 
 const float PLAYER_GRAVITY = 0.5f;
-const float PLAYER_MOVE_SPEED = 3.0f; // Tăng tốc độ một chút cho cảm giác tốt hơn
+const float PLAYER_MOVE_SPEED = 3.0f; // tốc độ di chuyển
 
 Player::Player(const std::string& texturePath, int x, int y, SDL_Renderer* renderer) {
     texture = TextureManager::LoadTexture(texturePath, renderer);
@@ -60,7 +60,7 @@ void Player::handleEvent(SDL_Event& e, std::vector<Projectile*>& projectiles, SD
     }
 }
 
-// HÀM UPDATE ĐƯỢC LÀM LẠI HOÀN TOÀN ĐỂ XỬ LÝ VA CHẠM
+// HÀM UPDATE ĐỂ XỬ LÝ VA CHẠM
 void Player::update(Map* map) {
     if (isCharging) {
         power += 5.0f;
@@ -113,7 +113,7 @@ void Player::update(Map* map) {
             onGround = false;
         }
     }
-    // Nếu đang bay lên
+    // Nếu đang bay lên(sau này phát triển thêm máy bay dịch chuyển vị trí :))
     else if (y_vel < 0) {
         if (map->getTileTypeFromPixelCoords(playerHitbox.x, playerHitbox.y) != 0 ||
             map->getTileTypeFromPixelCoords(playerHitbox.x + playerHitbox.w, playerHitbox.y) != 0)

@@ -68,7 +68,6 @@ private:
     SDL_Texture* turn2Texture = nullptr;
     SDL_Texture* win1Texture = nullptr;
     SDL_Texture* win2Texture = nullptr;
-    Map* map = nullptr;
 
     Button* playAgainButton = nullptr;
     Button* player1Button = nullptr;
@@ -78,11 +77,13 @@ private:
     Button* musicToggleButton = nullptr;
     Button* backButton = nullptr;
 
-    bool turnShouldEnd = false;
+    Map* map = nullptr;
     Player* player1 = nullptr;
     Player* player2 = nullptr;
     std::vector<Projectile*> projectiles;
     std::vector<Explosion*> explosions;
+
+    bool turnShouldEnd = false;
     int currentPlayerTurn = 1;
     Uint32 turnStartTime = 0;
     const int TURN_DURATION = 20000;

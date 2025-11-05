@@ -15,7 +15,7 @@ public:
     void render(SDL_Renderer* renderer);
     SDL_Rect getRect();
 
-    // <<-- HÀM MỚI ĐỂ KIỂM TRA RƠI RA NGOÀI
+    //  KIỂM TRA RƠI RA NGOÀI
     bool isOutOfBound(int screenHeight) const;
 
     float getPower() const { return power; }
